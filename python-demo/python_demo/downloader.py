@@ -8,7 +8,6 @@ import click
 import aiohttp
 import time
 import uvloop
-from aiohttp import TCPConnector
 from attr import dataclass
 
 HOST_URL = os.environ.get("API_HOST_URL")
@@ -28,7 +27,7 @@ class Result:
     error: Optional[Exception] = None
 
 
-async def download_video(file_name: str, connector: TCPConnector) -> Result:
+async def download_video(file_name: str) -> Result:
     """
     Download a content
     """
@@ -53,10 +52,8 @@ async def write_to_file(tmpdirname: str, content: bytes) -> None:
         click.secho(f"Finished writing {filename}", fg="green")
 
 
-async def web_scrape_task(
-    file_name: str, tmpdirname: str, connector: TCPConnector
-) -> None:
-    resp = await download_video(file_name, connector)
+async def web_scrape_task(file_name: str, tmpdirname: str) -> None:
+    resp = await download_video(file_name)
     if resp.error is None:
         await write_to_file(tmpdirname, resp.content)
     else:
@@ -76,10 +73,9 @@ def main() -> None:
 
 async def async_main() -> None:
     s = time.perf_counter()
-    conn = aiohttp.TCPConnector(limit=3)
     with tempfile.TemporaryDirectory() as tmpdirname:
         await asyncio.gather(
-            *[web_scrape_task(file_name, tmpdirname, conn) for file_name in FILES]
+            *[web_scrape_task(file_name, tmpdirname) for file_name in FILES]
         )
     elapsed = time.perf_counter() - s
     click.secho(f"Execution time: {elapsed:0.2f} seconds.", fg="bright_blue")
